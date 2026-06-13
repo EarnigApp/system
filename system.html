@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0b0316">
+    <title>MASTERMIND SYSTEM</title>
+    <style>
+        /* CSS Parser Fix: Used &amp; for XML safety */
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&amp;family=Rajdhani:wght@500;600;700&amp;display=swap');
+
+        :root {
+            --bg-deep: #070110;
+            --purple-dark: #240046;
+            --purple-mid: #7b2cbf;
+            --purple-light: #e0aaff;
+            --purple-neon: #c77dff;
+            --alert-red: #ff2a5f;
+            
+            --glass-bg: rgba(20, 10, 35, 0.45);
+            --glass-border: rgba(199, 125, 255, 0.15);
+            --glass-highlight: rgba(199, 125, 255, 0.08);
+            
+            --text-pure: #ffffff;
+            --text-dim: #9ca3af;
+            
+            --glow-neon: 0 0 15px rgba(199, 125, 255, 0.5);
+            --glow-red: 0 0 20px rgba(255, 42, 95, 0.4);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body, html {
+            background-color: var(--bg-deep); color: var(--text-pure);
+            font-family: 'Outfit', sans-serif;
+            display: flex; justify-content: center;
+            width: 100vw; height: 100dvh; overflow: hidden; position: relative;
+        }
+
+        .ambient-orb-1 { position: absolute; top: -5%; left: -15%; width: 250px; height: 250px; background: var(--purple-mid); border-radius: 50%; filter: blur(100px); opacity: 0.35; z-index: 0; pointer-events: none; }
+        .ambient-orb-2 { position: absolute; bottom: 5%; right: -15%; width: 300px; height: 300px; background: #3a0ca3; border-radius: 50%; filter: blur(120px); opacity: 0.4; z-index: 0; pointer-events: none; }
+
+        #app-container {
+            width: 100%; max-width: 420px; height: 100dvh;
+            position: relative; z-index: 1; display: none; flex-direction: column;
+            background: linear-gradient(180deg, rgba(7,1,16,0.7) 0%, rgba(7,1,16,0.95) 100%);
+            backdrop-filter: blur(15px); border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border);
+        }
+
+        #boot-sequence {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 999; background: var(--bg-deep); backdrop-filter: blur(20px);
+        }
+        .boot-title {
+            font-family: 'Rajdhani', sans-serif; font-size: 2.8rem; letter-spacing: 12px;
+            color: var(--text-pure); text-shadow: var(--glow-neon); margin-bottom: 50px;
+            animation: pulse-boot 2s infinite; text-transform: uppercase;
+        }
+        @keyframes pulse-boot { 0%, 100% { opacity: 0.7; text-shadow: 0 0 15px rgba(199,125,255,0.3); } 50% { opacity: 1; text-shadow: 0 0 35px rgba(199,125,255,0.8); } }
+        
+        .init-btn {
+            background: rgba(123, 44, 191, 0.15); border: 1px solid var(--purple-light); color: var(--text-pure);
+            padding: 16px 45px; font-family: 'Rajdhani', sans-serif; font-size: 1.2rem; font-weight: 700;
+            letter-spacing: 5px; border-radius: 30px; cursor: pointer; box-shadow: 0 0 20px rgba(123,44,191,0.3);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .init-btn:active { transform: scale(0.92); background: var(--purple-mid); box-shadow: var(--glow-neon);}
+
+        .app-header {
+            text-align: center; padding: env(safe-area-inset-top, 25px) 0 15px 0;
+            font-family: 'Rajdhani', sans-serif; font-size: 1.5rem; font-weight: 700; letter-spacing: 8px;
+            color: var(--purple-light); border-bottom: 1px solid var(--glass-border); text-shadow: 0 0 15px rgba(224, 170, 255, 0.2);
+        }
+
+        .view-content { flex: 1; overflow-y: auto; padding: 25px 20px 120px 20px; display: none; flex-direction: column; gap: 20px; scroll-behavior: smooth; }
+        .view-content.active { display: flex; animation: slideUpFade 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .view-content::-webkit-scrollbar { display: none; }
+
+        .panel-heading { color: var(--purple-light); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 15px; font-weight: 600; }
+
+        .progress-master { display: flex; flex-direction: column; align-items: center; margin-top: 5px;}
+        .authority-badge { text-align: center; margin-bottom: 35px; }
+        .auth-lvl { font-family: 'Rajdhani', sans-serif; font-size: 5.5rem; font-weight: 700; color: var(--text-pure); line-height: 0.9; text-shadow: 0 0 25px rgba(199, 125, 255, 0.4); }
+        .auth-title { color: var(--text-dim); text-transform: uppercase; font-size: 0.9rem; letter-spacing: 5px; font-weight: 400;}
+        
+        .status-ring-container {
+            width: 240px; height: 240px; position: relative; display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; background: rgba(0,0,0,0.3); box-shadow: inset 0 0 40px rgba(0,0,0,0.8);
+            border: 1px solid var(--glass-border);
+        }
+        .status-ring {
+            width: 100%; height: 100%; border-radius: 50%; position: absolute; top: 0; left: 0;
+            background: conic-gradient(var(--purple-neon) var(--progress, 0%), transparent 0);
+            mask: radial-gradient(transparent 66%, black 67%); -webkit-mask: radial-gradient(transparent 66%, black 67%);
+            transition: --progress 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+            filter: drop-shadow(0 0 12px var(--purple-neon));
+        }
+        .ring-data { text-align: center; z-index: 2;}
+        .ring-percent { font-family: 'Rajdhani', sans-serif; font-size: 4.5rem; font-weight: 700; line-height: 1; text-shadow: var(--glow-neon); color: #fff;}
+        .ring-label { font-size: 0.8rem; color: var(--purple-light); letter-spacing: 3px; text-transform: uppercase; }
+
+        .maximized-alert {
+            display: none; padding: 20px; text-align: center; background: rgba(199, 125, 255, 0.1); 
+            border: 1px solid var(--purple-neon); border-radius: 15px; margin-top: 30px; 
+            animation: breathe 3s ease-in-out infinite;
+        }
+        @keyframes breathe { 0%, 100% { box-shadow: 0 0 15px rgba(199,125,255,0.1); } 50% { box-shadow: 0 0 35px rgba(199,125,255,0.4); } }
+        .max-title { font-family: 'Rajdhani', sans-serif; color: var(--text-pure); font-size: 1.3rem; letter-spacing: 4px; margin-bottom: 5px; font-weight: 700;}
+
+        .insight-module {
+            background: linear-gradient(135deg, rgba(123, 44, 191, 0.2) 0%, rgba(0,0,0,0.2) 100%); 
+            border: 1px solid rgba(199, 125, 255, 0.3); border-radius: 16px; padding: 20px; position: relative; overflow: hidden;
+        }
+        .insight-module::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--purple-neon); box-shadow: var(--glow-neon);}
+        .insight-txt { font-size: 0.95rem; color: var(--text-pure); font-weight: 300; line-height: 1.6; }
+
+        .header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 12px;}
+        .section-title { font-family: 'Rajdhani', sans-serif; font-size: 1.1rem; color: var(--text-dim); letter-spacing: 3px; text-transform: uppercase;}
+        .ctrl-btn { background: none; border: none; color: var(--purple-light); font-family: 'Outfit'; font-size: 0.9rem; cursor: pointer; font-weight: 600; padding: 5px;}
+
+        .task-list { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-top: 15px;}
+        .task-card { 
+            display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.3); padding: 16px; 
+            border: 1px solid var(--glass-border); border-radius: 14px; transition: all 0.2s ease;
+        }
+        .task-card:active { transform: scale(0.98); }
+        .task-card.done { opacity: 0.45; background: transparent; }
+        
+        .check-box { 
+            width: 24px; height: 24px; border: 2px solid var(--text-dim); border-radius: 6px; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;
+        }
+        .task-card.done .check-box { background: var(--purple-neon); border-color: var(--purple-neon); box-shadow: var(--glow-neon); cursor: default;}
+        .task-card.done .check-box::after { content: '✓'; color: var(--bg-deep); font-size: 14px; font-weight: bold;}
+        
+        .task-meta { flex: 1; cursor: pointer; }
+        .task-card.done .task-meta { cursor: default; }
+        .task-title { font-size: 1.1rem; font-weight: 400; letter-spacing: 0.5px;}
+        .task-card.done .task-title { text-decoration: line-through; color: var(--text-dim); }
+        .task-unit { font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; color: var(--purple-light); font-weight: 600; margin-top: 4px; display: inline-block; padding: 3px 8px; background: rgba(199, 125, 255, 0.15); border-radius: 6px;}
+        
+        .task-tools { display: none; gap: 10px; }
+        .is-editing .check-box { display: none; }
+        .is-editing .task-tools { display: flex; }
+        .tool-btn { background: none; border: none; color: var(--text-dim); font-size: 1.2rem; cursor: pointer; transition: 0.2s;}
+        .tool-btn.danger { color: var(--alert-red); }
+
+        .form-panel { display: flex; flex-direction: column; gap: 12px; background: var(--glass-bg); padding: 18px; border-radius: 16px; margin-top: 15px; border: 1px solid var(--glass-border);}
+        .input-row { display: flex; gap: 10px; }
+        .ui-input { background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); color: var(--text-pure); padding: 14px; font-family: 'Outfit'; font-size: 1rem; outline: none; border-radius: 10px; transition: border 0.2s;}
+        .ui-input:focus { border-color: var(--purple-light); }
+        .ui-input::placeholder { color: rgba(255,255,255,0.3); }
+        select.ui-input { appearance: none; color: var(--purple-light); cursor: pointer; font-weight: 600;}
+        input[type="time"].ui-input { cursor: pointer; color: var(--purple-neon); font-weight: bold; }
+        input[type="time"].ui-input::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer;}
+        
+        .submit-btn { background: var(--purple-mid); border: none; color: var(--text-pure); font-family: 'Rajdhani', sans-serif; font-size: 1.05rem; font-weight: 700; padding: 16px; border-radius: 10px; cursor: pointer; transition: 0.2s; letter-spacing: 2px;}
+        .submit-btn:active { transform: scale(0.97); background: var(--purple-neon); box-shadow: var(--glow-neon);}
+        
+        .edit-input { background: rgba(0,0,0,0.5); border: none; border-bottom: 2px solid var(--purple-light); color: var(--text-pure); outline: none; font-size: 1.05rem; flex: 1; padding: 5px; font-family: 'Outfit'; border-radius: 4px;}
+
+        .log-feed { list-style: none; display: flex; flex-direction: column; gap: 16px; margin-top: 15px;}
+        .log-entry { display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 12px;}
+        .log-stamp { font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; color: var(--purple-light); letter-spacing: 1px; font-weight: 600;}
+        .log-detail { font-size: 0.95rem; color: var(--text-dim); font-weight: 300; line-height: 1.5;}
+        .log-entry.critical .log-detail { color: var(--alert-red); font-weight: 400;}
+
+        /* --- 4-Tab Bottom Nav --- */
+        .glass-nav { 
+            position: absolute; bottom: max(25px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+            width: calc(100% - 30px); display: flex; background: rgba(11, 3, 22, 0.85); 
+            border: 1px solid var(--glass-border); border-radius: 30px; padding: 6px; 
+            backdrop-filter: blur(25px); z-index: 10; box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+        }
+        .nav-item { 
+            flex: 1; background: transparent; border: none; color: var(--text-dim); 
+            font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; 
+            padding: 14px 0; border-radius: 20px; cursor: pointer; transition: all 0.3s ease;
+        }
+        .nav-item.active { background: var(--glass-highlight); color: var(--text-pure); box-shadow: inset 0 0 10px rgba(255,255,255,0.05);}
+
+        #breach-overlay {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(7, 1, 16, 0.97); z-index: 100; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; backdrop-filter: blur(15px);
+        }
+        .breach-title { font-family: 'Rajdhani', sans-serif; color: var(--alert-red); font-size: 4rem; letter-spacing: 10px; margin-bottom: 20px; font-weight: 700; text-shadow: var(--glow-red);}
+        .breach-desc { color: var(--text-pure); font-size: 1.1rem; line-height: 1.6; margin-bottom: 45px; font-weight: 300;}
+        .breach-btn { background: rgba(255,42,95,0.1); border: 2px solid var(--alert-red); color: var(--alert-red); padding: 18px 35px; font-family: 'Rajdhani', sans-serif; font-size: 1.1rem; font-weight: 700; cursor: pointer; border-radius: 30px; transition: 0.3s; letter-spacing: 2px; box-shadow: inset 0 0 15px rgba(255,42,95,0.2);}
+        .breach-btn:active { background: var(--alert-red); color: var(--text-pure); transform: scale(0.95);}
+
+        @property --progress { syntax: '<percentage>'; inherits: false; initial-value: 0%; }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-orb-1"></div>
+    <div class="ambient-orb-2"></div>
+
+    <div id="boot-sequence">
+        <div class="boot-title">SYSTEM</div>
+        <button class="init-btn" onclick="executeBootSequence()">INITIALIZE</button>
+    </div>
+
+    <div id="app-container">
+        <div class="app-header">MASTERMIND</div>
+        
+        <div id="view-status" class="view-content active">
+            <div class="progress-master">
+                <div class="authority-badge">
+                    <div class="auth-lvl" id="auth-level">1</div>
+                    <div class="auth-title">Authority Level</div>
+                </div>
+                
+                <div class="status-ring-container">
+                    <div class="status-ring" id="progress-circle"></div>
+                    <div class="ring-data">
+                        <div class="ring-percent"><span id="progress-val">0</span>%</div>
+                        <div class="ring-label">Optimized</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="maximized-alert" class="maximized-alert">
+                <div class="max-title">MAXIMIZATION ACHIEVED</div>
+                <div style="font-size: 0.9rem; color: var(--text-dim); font-weight: 300;">All daily parameters fulfilled.<br>The System acknowledges your discipline.</div>
+            </div>
+        </div>
+
+        <div id="view-quests" class="view-content">
+            <div class="insight-module">
+                <div class="panel-heading" style="color:var(--purple-neon);">SYSTEM INSIGHT</div>
+                <div class="insight-txt" id="insight-text">Analyzing parameters...</div>
+            </div>
+
+            <div>
+                <div class="header-row">
+                    <div class="section-title">Directives</div>
+                    <button class="ctrl-btn" id="edit-toggle-btn" onclick="toggleEditMode()">MANAGE</button>
+                </div>
+                
+                <ul class="task-list" id="directive-list"></ul>
+
+                <div class="form-panel">
+                    <input type="text" class="ui-input" id="input-name" placeholder="Directive Name (e.g. Deep Work)">
+                    <div class="input-row">
+                        <input type="number" class="ui-input" id="input-amt" placeholder="Amount" style="flex: 1;">
+                        <select class="ui-input" id="input-unit" style="flex: 1;">
+                            <option value="Reps">Reps</option>
+                            <option value="Mins">Mins</option>
+                            <option value="Steps">Steps</option>
+                            <option value="Liters">Liters</option>
+                            <option value="Pages">Pages</option>
+                        </select>
+                    </div>
+                    <button class="submit-btn" onclick="addTask()">ADD PARAMETER</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-system" class="view-content">
+            <div class="header-row"><div class="section-title">Core Logs</div></div>
+            <ul class="log-feed" id="log-feed"></ul>
+        </div>
+
+        <div id="view-config" class="view-content">
+            <div class="header-row"><div class="section-title">Configuration</div></div>
+            
+            <div class="form-panel" style="margin-top: 5px;">
+                <div class="panel-heading" style="color:var(--purple-neon); margin-bottom: 10px;">Push Notifications</div>
+                <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 15px; font-weight: 300;">Define exact timestamps for System discipline checks.</div>
+                
+                <ul class="task-list" id="notif-list" style="margin-top:0; margin-bottom: 15px; gap: 8px;"></ul>
+                
+                <div class="input-row">
+                    <input type="time" class="ui-input" id="new-notif-time" style="flex:1;">
+                    <button class="submit-btn" style="padding: 10px 20px; font-size: 0.9rem;" onclick="addNotifTime()">ADD</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="breach-overlay">
+            <div class="breach-title">BREACH</div>
+            <div class="breach-desc">Parameters were abandoned.<br><br>The System applied a <span style="color:var(--alert-red); font-weight:600;">1.4x Progressive Penalty</span> to failed directives. Complete the protocol to restore UI.</div>
+            <button class="breach-btn" onclick="restoreSystem()">ACKNOWLEDGE</button>
+        </div>
+
+        <div class="glass-nav">
+            <button class="nav-item active" onclick="switchView('status', this)">Status</button>
+            <button class="nav-item" onclick="switchView('quests', this)">Quest</button>
+            <button class="nav-item" onclick="switchView('system', this)">System</button>
+            <button class="nav-item" onclick="switchView('config', this)">Config</button>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+    //<![CDATA[
+        function triggerHaptic(type) {
+            if (!navigator.vibrate) return;
+            if (type === 'light') navigator.vibrate(40);
+            if (type === 'heavy') navigator.vibrate([100, 50, 100]);
+        }
+
+        // Notification Permission & Sender
+        function requestNotificationPermission() {
+            if (!("Notification" in window)) return;
+            if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+                Notification.requestPermission();
+            }
+        }
+
+        function sendPushNotification(title, body) {
+            if (!("Notification" in window) || Notification.permission !== "granted") return;
+            new Notification(title, {
+                body: body,
+                icon: 'https://cdn-icons-png.flaticon.com/512/564/564619.png'
+            });
+        }
+
+        function executeBootSequence() {
+            triggerHaptic('light');
+            requestNotificationPermission();
+            
+            let elem = document.documentElement;
+            if (elem.requestFullscreen) elem.requestFullscreen().catch(e => console.log(e));
+            else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+            
+            document.getElementById('boot-sequence').style.display = 'none';
+            document.getElementById('app-container').style.display = 'flex';
+            
+            coreInit();
+        }
+
+        const DB_KEY = 'sys_mastermind_prod_final_v6';
+        let db = JSON.parse(localStorage.getItem(DB_KEY)) || {
+            level: 1, totalDone: 0,
+            tasks: [
+                { id: 1, name: "Push-ups", amt: 20, baseAmt: 20, unit: "Reps", completed: false },
+                { id: 2, name: "Deep Work Focus", amt: 60, baseAmt: 60, unit: "Mins", completed: false },
+                { id: 3, name: "Hydration Check", amt: 3, baseAmt: 3, unit: "Liters", completed: false }
+            ],
+            logs: [], lastDate: new Date().toDateString(), isLocked: false,
+            // Dynamic User Settings
+            settings: {
+                notifTimes: ["00:00", "06:00", "08:00"] // Default HH:MM strings
+            },
+            notifTrack: { date: new Date().toDateString(), sent: {} }
+        };
+
+        let editModeActive = false;
+        let inlineEditingId = null;
+
+        function coreInit() {
+            // Data structure update safeguard for returning users
+            if(!db.settings) { db.settings = { notifTimes: ["00:00", "06:00", "08:00"] }; }
+            if(!db.notifTrack || !db.notifTrack.sent) { db.notifTrack = { date: new Date().toDateString(), sent: {} }; }
+
+            if (db.logs.length === 0) writeLog("System Core online. Awaiting maximization protocol.", "normal");
+            validateDailyCycle(); 
+            processInsights(); 
+            renderAll();
+            
+            // Notification Background Interval (Every 30 secs)
+            setInterval(checkNotificationTimers, 30000);
+            checkNotificationTimers(); 
+        }
+
+        function switchView(target, btn) {
+            triggerHaptic('light');
+            document.querySelectorAll('.view-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`view-${target}`).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        // --- 1. OPTIMIZED PENALTY RESET LOGIC ---
+        function validateDailyCycle() {
+            const today = new Date().toDateString();
+            if (db.lastDate !== today) {
+                let uncompleted = db.tasks.filter(t => !t.completed);
+                let completed = db.tasks.filter(t => t.completed);
+                
+                // Reset Completed Tasks to Baseline
+                completed.forEach(t => {
+                    if (t.amt !== t.baseAmt) {
+                        writeLog(`Penalty cleared: ${t.name} restored to base ${t.baseAmt} ${t.unit}.`, "normal");
+                        t.amt = t.baseAmt;
+                    }
+                });
+
+                // Escalate Uncompleted Tasks (1.4x)
+                if (uncompleted.length > 0) {
+                    db.isLocked = true;
+                    uncompleted.forEach(t => {
+                        let prev = t.amt;
+                        t.amt = (t.unit === 'Liters') ? Math.round((t.amt * 1.4) * 10) / 10 : Math.ceil(t.amt * 1.4);
+                        writeLog(`Penalty Escalation: ${t.name} increased from ${prev} to ${t.amt} ${t.unit}.`, "critical");
+                    });
+                    writeLog("CRITICAL BREACH: Parameters abandoned. System UI Locked.", "critical");
+                } else if(db.tasks.length > 0) {
+                    writeLog("Cycle flawless. All parameters maintained.", "normal");
+                }
+                
+                // Reset checkmarks & Tracker
+                db.tasks.forEach(t => t.completed = false);
+                db.lastDate = today;
+                db.notifTrack = { date: today, sent: {} };
+                saveData();
+            }
+        }
+
+        // --- 2. DYNAMIC TIMED PUSH NOTIFICATIONS ---
+        function checkNotificationTimers() {
+            const now = new Date();
+            const todayStr = now.toDateString();
+            const currentMins = now.getHours() * 60 + now.getMinutes();
+
+            if (!db.notifTrack || db.notifTrack.date !== todayStr) {
+                db.notifTrack = { date: todayStr, sent: {} };
+            }
+
+            let remainingCount = db.tasks.filter(t => !t.completed).length;
+            if (remainingCount === 0) return; 
+
+            db.settings.notifTimes.forEach(timeStr => {
+                let parts = timeStr.split(':');
+                if(parts.length !== 2) return;
+                let targetMins = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+                
+                // If current time passed the target time AND notification not sent today
+                if (currentMins >= targetMins && !db.notifTrack.sent[timeStr]) {
+                    sendPushNotification("SYSTEM // PROTOCOL", `Discipline check: ${remainingCount} parameters require execution.`);
+                    db.notifTrack.sent[timeStr] = true;
+                    saveData();
+                }
+            });
+        }
+
+        function processInsights() {
+            let pending = db.tasks.filter(t => !t.completed);
+            const display = document.getElementById('insight-text');
+
+            if (pending.length === 0) {
+                display.innerText = "All parameters fulfilled. System offline for recovery."; return;
+            }
+
+            let physical = pending.some(t => t.unit === 'Reps' || t.unit === 'Steps');
+            let mental = pending.some(t => t.unit === 'Mins' || t.unit === 'Pages');
+            let water = pending.some(t => t.unit === 'Liters');
+
+            if (mental && physical) {
+                display.innerText = "Sequential Optimization: Execute physical parameters (Reps/Steps) prior to focus periods (Mins/Pages) to maximize neurological blood flow.";
+            } else if (physical && !water) {
+                display.innerText = "System Warning: Physical output detected without corresponding hydration parameter. Efficiency drop highly probable.";
+            } else if (mental && !physical) {
+                display.innerText = "Analysis: Cognitive load is high. Consider adding a short physical parameter to reset mental capacity.";
+            } else {
+                display.innerText = "Parameters acknowledged. Execute directives methodically to achieve maximization.";
+            }
+        }
+
+        function renderAll() {
+            document.getElementById('breach-overlay').style.display = db.isLocked ? 'flex' : 'none';
+            document.getElementById('auth-level').innerText = db.level;
+            
+            let total = db.tasks.length;
+            let done = db.tasks.filter(t => t.completed).length;
+            let percent = total === 0 ? 0 : Math.round((done / total) * 100);
+
+            const ring = document.getElementById('progress-circle');
+            ring.style.setProperty('--progress', `${percent}%`);
+            document.getElementById('progress-val').innerText = percent;
+            document.getElementById('maximized-alert').style.display = (percent === 100 && total > 0) ? 'block' : 'none';
+
+            renderDirectives(); 
+            renderLogFeed();
+            renderSettings();
+        }
+
+        // --- 3. DIRECTIVES CRUD ---
+        function renderDirectives() {
+            const list = document.getElementById('directive-list');
+            list.innerHTML = '';
+            
+            db.tasks.forEach(t => {
+                const li = document.createElement('li');
+                li.className = `task-card ${t.completed ? 'done' : ''} ${editModeActive ? 'is-editing' : ''}`;
+                
+                if (inlineEditingId === t.id) {
+                    li.innerHTML = `
+                        <input type="text" class="edit-input" id="edit-box-${t.id}" value="${t.name}">
+                        <button class="tool-btn" onclick="saveInlineEdit(${t.id})" style="color:var(--text-pure); margin-left:10px;">✓</button>
+                    `;
+                } else {
+                    li.innerHTML = `
+                        <div class="check-box" onclick="!editModeActive && triggerTask(${t.id})"></div>
+                        <div class="task-meta" onclick="!editModeActive && triggerTask(${t.id})">
+                            <div class="task-title">${t.name}</div>
+                            <div class="task-unit">${t.amt} ${t.unit}</div>
+                        </div>
+                        <div class="task-tools">
+                            <button class="tool-btn" onclick="startInlineEdit(${t.id})">✎</button>
+                            <button class="tool-btn danger" onclick="removeTask(${t.id})">✕</button>
+                        </div>
+                    `;
+                }
+                list.appendChild(li);
+            });
+        }
+
+        function toggleEditMode() {
+            triggerHaptic('light');
+            editModeActive = !editModeActive;
+            inlineEditingId = null;
+            document.getElementById('edit-toggle-btn').innerText = editModeActive ? "DONE" : "MANAGE";
+            renderDirectives();
+        }
+
+        function triggerTask(id) {
+            triggerHaptic('light');
+            const t = db.tasks.find(x => x.id === id);
+            
+            // ONE-WAY LOCK: If already completed, do nothing!
+            if (t.completed) return;
+            
+            // Mark as completed permanently for the day
+            t.completed = true;
+            db.totalDone++;
+            if (db.totalDone % 10 === 0) {
+                db.level++;
+                writeLog(`Authority Level upgraded to ${db.level}.`, "normal");
+            }
+            
+            saveData(); processInsights(); renderAll();
+        }
+
+        function addTask() {
+            triggerHaptic('light');
+            const name = document.getElementById('input-name').value.trim();
+            const amt = parseFloat(document.getElementById('input-amt').value);
+            const unit = document.getElementById('input-unit').value;
+            
+            if (!name || isNaN(amt) || amt <= 0) { alert("Invalid directive formatting."); return; }
+
+            db.tasks.push({ id: Date.now(), name, amt: amt, baseAmt: amt, unit, completed: false });
+            document.getElementById('input-name').value = '';
+            document.getElementById('input-amt').value = '';
+            
+            writeLog(`Directive configured: ${name} [${amt} ${unit}]`);
+            saveData(); processInsights(); renderAll();
+        }
+
+        function removeTask(id) {
+            triggerHaptic('light');
+            db.tasks = db.tasks.filter(t => t.id !== id);
+            saveData(); processInsights(); renderAll();
+        }
+
+        function startInlineEdit(id) {
+            triggerHaptic('light');
+            inlineEditingId = id; renderDirectives();
+            setTimeout(() => { document.getElementById(`edit-box-${id}`).focus(); }, 50);
+        }
+
+        function saveInlineEdit(id) {
+            const val = document.getElementById(`edit-box-${id}`).value.trim();
+            if (val) {
+                const t = db.tasks.find(x => x.id === id);
+                t.name = val;
+            }
+            inlineEditingId = null; saveData(); renderDirectives();
+        }
+
+        // --- 4. SETTINGS (CONFIG) CRUD ---
+        function formatTime12(timeStr) {
+            let [h, m] = timeStr.split(':');
+            let hour = parseInt(h);
+            let ampm = hour >= 12 ? 'PM' : 'AM';
+            hour = hour % 12;
+            hour = hour ? hour : 12; // 0 becomes 12
+            return `${hour}:${m} ${ampm}`;
+        }
+
+        function renderSettings() {
+            const list = document.getElementById('notif-list');
+            list.innerHTML = '';
+            
+            db.settings.notifTimes.sort().forEach((timeStr, index) => {
+                const li = document.createElement('li');
+                li.className = 'task-card';
+                li.style.padding = '12px 16px';
+                
+                li.innerHTML = `
+                    <div class="task-meta">
+                        <div class="task-title" style="color:var(--purple-neon); font-family:'Rajdhani', sans-serif; font-weight:700;">${formatTime12(timeStr)}</div>
+                    </div>
+                    <button class="tool-btn danger" style="display:block;" onclick="removeNotifTime(${index})">✕</button>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        function addNotifTime() {
+            triggerHaptic('light');
+            const timeVal = document.getElementById('new-notif-time').value; // Format is HH:MM
+            if (!timeVal) { alert("Select a valid time."); return; }
+            
+            if (!db.settings.notifTimes.includes(timeVal)) {
+                db.settings.notifTimes.push(timeVal);
+                writeLog(`New notification timer set for ${formatTime12(timeVal)}.`);
+                saveData(); renderSettings();
+            }
+            document.getElementById('new-notif-time').value = '';
+        }
+
+        function removeNotifTime(index) {
+            triggerHaptic('light');
+            db.settings.notifTimes.splice(index, 1);
+            saveData(); renderSettings();
+        }
+
+        // --- 5. LOGS & OVERLAYS ---
+        function restoreSystem() {
+            triggerHaptic('heavy');
+            db.isLocked = false;
+            writeLog("Survival Protocol Acknowledged. Executing revised parameters.", "normal");
+            saveData(); renderAll();
+        }
+
+        function writeLog(msg, type = "normal") {
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            db.logs.unshift({ time, msg, type });
+            if (db.logs.length > 30) db.logs.pop();
+        }
+
+        function renderLogFeed() {
+            const list = document.getElementById('log-feed');
+            list.innerHTML = '';
+            db.logs.forEach(l => {
+                const li = document.createElement('li');
+                li.className = `log-entry ${l.type === 'critical' ? 'critical' : ''}`;
+                li.innerHTML = `<div class="log-stamp">${l.time}</div><div class="log-detail">${l.msg}</div>`;
+                list.appendChild(li);
+            });
+        }
+
+        function saveData() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+    //]]>
+    </script>
+</body>
+</html>
